@@ -45,7 +45,7 @@ export var VoxProvider = function (_a) {
     var _b = useState(null), token = _b[0], setToken = _b[1];
     var _c = useState(null), region = _c[0], setRegion = _c[1];
     var lastCallRef = useRef(0);
-    var apiRef = useRef(createApi(config.baseUrl));
+    var apiRef = useRef(createApi(config === null || config === void 0 ? void 0 : config.baseUrl));
     var getAuthTokenAzure = React.useCallback(function () { return __awaiter(void 0, void 0, void 0, function () {
         var response, _a, newToken, newRegion;
         return __generator(this, function (_b) {
