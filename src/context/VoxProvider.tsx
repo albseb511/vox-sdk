@@ -4,7 +4,7 @@ import api, { createApi } from "../api/axios";
 import { REFETCH_TOKEN_TIME } from "../utils/constant.utils";
 
 // Configuration interface
-interface VoxProviderConfig {
+export interface VoxProviderConfig {
   baseUrl: string;
 }
 
@@ -13,7 +13,7 @@ interface GetAuthResponse {
   region: string;
 }
 
-interface AppContextType {
+export interface AppContextType {
   getAuthTokenAzure: () => Promise<GetAuthResponse>;
   token: string;
   region: string;
