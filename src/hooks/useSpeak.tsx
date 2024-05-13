@@ -3,21 +3,19 @@
 //
 import * as sdk from "microsoft-cognitiveservices-speech-sdk";
 import React, { useEffect, useRef, useState } from "react";
-import getAuthTokenAzure from "../utils/getAuthTokenAzure";
-// import react-toastify
 import { useThrottledCallback } from "use-debounce";
+import { useAppContext } from "../context/VoxProvider";
 
 function useTTSwithAI({
   shouldCallOnEnd = false,
+  voice = "en-US-JennyNeural",
   onEnd,
+  throttleDelay = 100,
 }: {
   shouldCallOnEnd: boolean;
   onEnd: () => void;
-  prompt?: string;
-  submission_id: string | undefined;
-  question_id: string | undefined;
-  voice_code?: string;
-  mode?: "conversation" | "editor";
+  voice?: string;
+  throttleDelay?: number;
 }) {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [hasAllSentencesBeenSpoken, setHasAllSentencesBeenSpoken] = useState(true);
@@ -29,10 +27,10 @@ function useTTSwithAI({
   const playerRef = React.useRef<sdk.SpeakerAudioDestination | null>(null);
   const audioConfig = React.useRef<sdk.AudioConfig | null>(null);
   const speechSythesizerRef = React.useRef<sdk.SpeechSynthesizer | null>(null);
-  const voice = "en-US-JennyNeural";
-  const getAuthTokenAzureApi = useRef(getAuthTokenAzure());
+  const { getAuthTokenAzure } = useAppContext();
+  const getAuthTokenAzureApi = useRef(getAuthTokenAzure);
 
-  const throttledCalledback = useThrottledCallback((text) => startTextToSpeech(text), 100);
+  const throttledCalledback = useThrottledCallback((text) => startTextToSpeech(text), throttleDelay);
   const isLocal = process.env.NODE_ENV === "development";
 
   const startTextToSpeech = async (text: string, _cancelEndCallback?: boolean): Promise<() => void> => {
