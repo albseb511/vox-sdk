@@ -1,0 +1,6 @@
+export const REFETCH_TOKEN_TIME = 10 * 60 * 1000;
+export enum ENVIRONMENT_TYPE {
+  DEV = "development",
+  PROD = "production",
+}
+export const APP_ENVIRONMENT: ENVIRONMENT_TYPE.DEV | ENVIRONMENT_TYPE.PROD = ENVIRONMENT_TYPE.DEV;

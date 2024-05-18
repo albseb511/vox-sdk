@@ -3,28 +3,23 @@
 //
 import * as sdk from "microsoft-cognitiveservices-speech-sdk";
 import React, { useEffect, useRef, useState } from "react";
-import getAuthTokenAzure from "../utils/getAuthTokenAzure";
-// import react-toastify
 import { useThrottledCallback } from "use-debounce";
+import { useAppContext } from "../context/VoxProvider";
 
 function useTTSwithAI({
   shouldCallOnEnd = false,
+  voice = "en-US-JennyNeural",
   onEnd,
+  throttleDelay = 100,
 }: {
   shouldCallOnEnd: boolean;
   onEnd: () => void;
-  prompt?: string;
-  submission_id: string | undefined;
-  question_id: string | undefined;
-  voice_code?: string;
-  mode?: "conversation" | "editor";
+  voice?: string;
+  throttleDelay?: number;
 }) {
-  const [isStreaming, setIsStreaming] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [hasAllSentencesBeenSpoken, setHasAllSentencesBeenSpoken] =
-    useState(true);
-  const [currentStreamedSentence, setCurrentStreamedSentence] =
-    useState<string>("");
+  const [hasAllSentencesBeenSpoken, setHasAllSentencesBeenSpoken] = useState(true);
+  const [_currentStreamedSentence, setCurrentStreamedSentence] = useState<string>("");
   const [streamedSentences, setStreamedSentences] = useState<string[]>([]);
   const [config, setConfig] = useState<{ t: string; r: string } | null>(null);
   const didStreamCallbackGetCalled = useRef(false);
@@ -32,19 +27,13 @@ function useTTSwithAI({
   const playerRef = React.useRef<sdk.SpeakerAudioDestination | null>(null);
   const audioConfig = React.useRef<sdk.AudioConfig | null>(null);
   const speechSythesizerRef = React.useRef<sdk.SpeechSynthesizer | null>(null);
-  const voice = "en-US-JennyNeural";
-  const getAuthTokenAzureApi = useRef(getAuthTokenAzure());
+  const { getAuthTokenAzure } = useAppContext();
+  const getAuthTokenAzureApi = useRef(getAuthTokenAzure);
 
-  const throttledCalledback = useThrottledCallback(
-    (text) => startTextToSpeech(text),
-    100
-  );
+  const throttledCalledback = useThrottledCallback((text) => startTextToSpeech(text), throttleDelay);
   const isLocal = process.env.NODE_ENV === "development";
 
-  const startTextToSpeech = async (
-    text: string,
-    cancelEndCallback?: boolean
-  ): Promise<() => void> => {
+  const startTextToSpeech = async (text: string, _cancelEndCallback?: boolean): Promise<() => void> => {
     if (isSpeaking) Promise.reject("Already speaking");
     // Creates an audio instance.
     if (playerRef.current?.id) {
@@ -77,25 +66,13 @@ function useTTSwithAI({
       const { token, region } = (await getAuthTokenAzureApi.current()) ?? {};
       if (!token || !region) Promise.reject(`Error getting token or region`);
       setConfig({ t: token, r: region });
-      const speechConfig = sdk.SpeechConfig.fromAuthorizationToken(
-        token,
-        region
-      );
+      const speechConfig = sdk.SpeechConfig.fromAuthorizationToken(token, region);
       speechConfig.speechSynthesisVoiceName = voice;
-      speechSythesizerRef.current = new sdk.SpeechSynthesizer(
-        speechConfig,
-        audioConfig.current
-      );
+      speechSythesizerRef.current = new sdk.SpeechSynthesizer(speechConfig, audioConfig.current);
     } else {
-      const speechConfig = sdk.SpeechConfig.fromAuthorizationToken(
-        config?.t,
-        config?.r
-      );
+      const speechConfig = sdk.SpeechConfig.fromAuthorizationToken(config?.t, config?.r);
       speechConfig.speechSynthesisVoiceName = voice;
-      speechSythesizerRef.current = new sdk.SpeechSynthesizer(
-        speechConfig,
-        audioConfig.current
-      );
+      speechSythesizerRef.current = new sdk.SpeechSynthesizer(speechConfig, audioConfig.current);
     }
 
     // Receives a text from console input and synthesizes it to speaker.
@@ -110,6 +87,8 @@ function useTTSwithAI({
             speechSythesizerRef.current = null;
             return result.audioData;
           }
+          // Explicitly return null or undefined when there's no result
+          return null; // or undefined
         },
         (error) => {
           isLocal && console.log(error);
@@ -123,7 +102,7 @@ function useTTSwithAI({
         setIsSpeaking(true);
       };
     } catch (err) {
-      console.log(`error`)
+      console.log(`error`);
     }
     return () => {
       isLocal && console.log(`closing player`);
@@ -133,10 +112,8 @@ function useTTSwithAI({
       playerRef.current = null;
       speechSythesizerRef.current?.close();
       speechSythesizerRef.current = null;
-
     };
   };
-
 
   useEffect(() => {
     if (!isSpeaking && streamedSentences.length > 0) {
@@ -148,11 +125,7 @@ function useTTSwithAI({
         });
       startTextToSpeech(streamedSentences[0]);
     }
-    if (
-      isSpeaking &&
-      streamedSentences.length === 0 &&
-      hasAllSentencesBeenSpoken
-    ) {
+    if (isSpeaking && streamedSentences.length === 0 && hasAllSentencesBeenSpoken) {
       setIsSpeaking(false);
       shouldCallOnEnd && onEnd();
     }
@@ -160,8 +133,7 @@ function useTTSwithAI({
 
   useEffect(() => {
     getAuthTokenAzureApi.current().then(({ token, region }) => {
-      if (!token || !region)
-        isLocal && console.log(`Error getting token or region`);
+      if (!token || !region) isLocal && console.log(`Error getting token or region`);
       setConfig({ t: token, r: region });
     });
 

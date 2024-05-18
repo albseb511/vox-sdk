@@ -1,16 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import * as sdk from "microsoft-cognitiveservices-speech-sdk";
 import { useDebouncedCallback } from "use-debounce";
-import getAuthTokenAzure from "../utils/getAuthTokenAzure";
 import { useToken } from "../context/VoxProvider";
-
-
 
 function useListen({
   onEndOfSpeech,
   isAiSpeaking,
   automatedEnd = true,
-  delay = 2000
+  delay = 2000,
 }: {
   onEndOfSpeech?: () => void;
   isAiSpeaking?: boolean;
@@ -24,11 +21,11 @@ function useListen({
   const [endOfSpeech, setEndOfSpeech] = useState<boolean>(false);
   const recognizerRef = useRef<sdk.SpeechRecognizer | null>(null);
   // is Local
-  const isLocal =  "development";
-  const {token, region} = useToken()
+  const isLocal = "development";
+  const { token, region } = useToken();
 
   const debounced = useDebouncedCallback(async (resolve) => {
-    if(!automatedEnd) return
+    if (!automatedEnd) return;
     setEndOfSpeech(true);
     setLoading(false);
     if (!userHasNotSpoken) {
@@ -48,49 +45,36 @@ function useListen({
   const [config, setConfig] = useState<{ t: string; r: string } | null>(null);
 
   const startSpeechRecognition: () => Promise<string[]> = () =>
-    new Promise(async (resolve, reject) => {
+    new Promise((resolve, _reject) => {
       if (recognizerRef.current) {
         recognizerRef.current.close();
         recognizerRef.current = null;
       }
       const audioConfig = sdk.AudioConfig.fromDefaultMicrophoneInput();
       if (!config) {
-        if (!token || !region)
-          return isLocal && console.log(`Error getting token or region`);
+        if (!token || !region) return isLocal && console.log(`Error getting token or region`);
         setConfig({ t: token, r: region });
-        const speechConfig = sdk.SpeechConfig.fromAuthorizationToken(
-          token,
-          region
-        );
+        const speechConfig = sdk.SpeechConfig.fromAuthorizationToken(token, region);
         speechConfig.speechRecognitionLanguage = "en-US";
-        recognizerRef.current = new sdk.SpeechRecognizer(
-          speechConfig,
-          audioConfig
-        );
+        recognizerRef.current = new sdk.SpeechRecognizer(speechConfig, audioConfig);
       } else {
-        const speechConfig = sdk.SpeechConfig.fromAuthorizationToken(
-          config?.t,
-          config?.r
-        );
+        const speechConfig = sdk.SpeechConfig.fromAuthorizationToken(config?.t, config?.r);
         speechConfig.speechSynthesisVoiceName = "en-US-GuyNeural";
-        recognizerRef.current = new sdk.SpeechRecognizer(
-          speechConfig,
-          audioConfig
-        );
+        recognizerRef.current = new sdk.SpeechRecognizer(speechConfig, audioConfig);
       }
 
       // debug statement
       isLocal && console.log("starting to recognise");
       setLoading(true);
 
-      recognizerRef.current.recognizing = (s, e) => {
+      recognizerRef.current.recognizing = (_s, e) => {
         isLocal && console.log(`RECOGNIZING: Text=${e.result.text}`);
         if (isAiSpeaking) return;
         setAnswer(e.result.text);
         debounced(resolve);
       };
 
-      recognizerRef.current.recognized = (s, e) => {
+      recognizerRef.current.recognized = (_s, e) => {
         if (e.result.reason == sdk.ResultReason.RecognizedSpeech) {
           isLocal && console.log(`RECOGNIZED: Text=${e.result.text}`);
           if (isAiSpeaking) return;
@@ -105,21 +89,18 @@ function useListen({
         }
       };
 
-      recognizerRef.current.canceled = (s, e) => {
+      recognizerRef.current.canceled = (_s, e) => {
         isLocal && console.log(`CANCELED: Reason=${e.reason}`);
         if (e.reason == sdk.CancellationReason.Error) {
           isLocal && console.log(`"CANCELED: ErrorCode=${e.errorCode}`);
           isLocal && console.log(`"CANCELED: ErrorDetails=${e.errorDetails}`);
-          isLocal &&
-            console.log(
-              "CANCELED: Did you set the speech resource key and region values?"
-            );
+          isLocal && console.log("CANCELED: Did you set the speech resource key and region values?");
         }
 
         recognizerRef.current?.stopContinuousRecognitionAsync();
       };
 
-      recognizerRef.current.sessionStopped = (s, e) => {
+      recognizerRef.current.sessionStopped = (_s, _e) => {
         isLocal && console.log("\n    Session stopped event.");
         recognizerRef.current?.stopContinuousRecognitionAsync();
       };
@@ -161,7 +142,7 @@ function useListen({
       stopSpeechRecognition();
     };
   }, []);
-  
+
   return {
     answer,
     answers,
