@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as sdk from "microsoft-cognitiveservices-speech-sdk";
 import { useDebouncedCallback } from "use-debounce";
-import { useToken } from "../context/VoxProvider";
+import { useAppContext } from "../context/VoxProvider";
 
 function useListen({
   onEndOfSpeech,
@@ -20,9 +20,10 @@ function useListen({
   const [loading, setLoading] = useState<boolean>(false);
   const [endOfSpeech, setEndOfSpeech] = useState<boolean>(false);
   const recognizerRef = useRef<sdk.SpeechRecognizer | null>(null);
+  const { refreshToken, getAuthTokenAzure, token, region } = useAppContext();
+
   // is Local
   const isLocal = "development";
-  const { token, region } = useToken();
 
   const debounced = useDebouncedCallback(async (resolve) => {
     if (!automatedEnd) return;
@@ -44,7 +45,7 @@ function useListen({
 
   const [config, setConfig] = useState<{ t: string; r: string } | null>(null);
 
-  const startSpeechRecognition: () => Promise<string[]> = () =>
+  const startSpeechRecognition: () => Promise<string[]> = async () =>
     new Promise((resolve, _reject) => {
       if (recognizerRef.current) {
         recognizerRef.current.close();
@@ -85,11 +86,11 @@ function useListen({
           setUserHasNotSpoken(false);
         } else if (e.result.reason == sdk.ResultReason.NoMatch) {
           setUserHasNotSpoken(true);
-          isLocal && console.log("NOMATCH: Speech could not be recognized.");
+          isLocal && console.log("NOMATCH: Speech could not be recognized or speech recognision completed.");
         }
       };
 
-      recognizerRef.current.canceled = (_s, e) => {
+      recognizerRef.current.canceled = async (_s, e) => {
         isLocal && console.log(`CANCELED: Reason=${e.reason}`);
         if (e.reason == sdk.CancellationReason.Error) {
           isLocal && console.log(`"CANCELED: ErrorCode=${e.errorCode}`);
@@ -98,6 +99,9 @@ function useListen({
         }
 
         recognizerRef.current?.stopContinuousRecognitionAsync();
+        setLoading(false);
+
+        if (e.errorCode === 4 || e.errorDetails.includes("1006")) await refreshToken(); //In case when is token expired
       };
 
       recognizerRef.current.sessionStopped = (_s, _e) => {
@@ -118,6 +122,13 @@ function useListen({
         }
       );
     });
+
+  useEffect(() => {
+    getAuthTokenAzure().then(({ token, region }) => {
+      if (!token || !region) isLocal && console.log(`Error getting token or region`);
+      setConfig({ t: token, r: region });
+    });
+  }, [refreshToken, token, region]);
 
   useEffect(() => {
     if (endOfSpeech && !userHasNotSpoken) {
