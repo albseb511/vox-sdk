@@ -1,11 +1,12 @@
 // apiContext.tsx
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { createApi } from "../api/axios";
-import { REFETCH_TOKEN_TIME } from "../utils/constant.utils";
+import { APP_ENVIRONMENT, ENVIRONMENT_TYPE, REFETCH_TOKEN_TIME } from "../utils/constant.utils";
 
 // Configuration interface
 interface VoxProviderConfig {
   baseUrl: string;
+  onAuthRefresh: () => Promise<{ token: string; region: string }>;
 }
 
 interface GetAuthResponse {
@@ -17,6 +18,7 @@ interface AppContextType {
   getAuthTokenAzure: () => Promise<GetAuthResponse>;
   token: string;
   region: string;
+  refreshToken: () => void;
 }
 
 // Create a context
@@ -31,9 +33,11 @@ export const VoxProvider: React.FC<{ children: React.ReactNode; config: VoxProvi
   const [region, setRegion] = useState<string | null>(null);
   const lastCallRef = useRef(0);
   const apiRef = useRef(createApi(config?.baseUrl));
+  const isLocal = APP_ENVIRONMENT === ENVIRONMENT_TYPE.DEV;
 
   const getAuthTokenAzure = React.useCallback(async () => {
-    // Check if token is valid and not expired
+    // Check if token is valid and not expires
+
     if (token && region && Date.now() - lastCallRef.current < REFETCH_TOKEN_TIME) {
       return { token, region };
     }
@@ -45,9 +49,20 @@ export const VoxProvider: React.FC<{ children: React.ReactNode; config: VoxProvi
     setRegion(newRegion);
     lastCallRef.current = Date.now();
     return { token: newToken, region: newRegion };
+  }, [token, region]);
+
+  const refreshToken = React.useCallback(async () => {
+    try {
+      const { token, region } = await config?.onAuthRefresh();
+      setToken(token);
+      setRegion(region);
+      lastCallRef.current = Date.now();
+    } catch (e) {
+      isLocal && console.log("Error refreshing token", e);
+    }
   }, []);
 
-  const contextValue = { getAuthTokenAzure, token: token!, region: region! };
+  const contextValue = { getAuthTokenAzure, token: token!, region: region!, refreshToken };
 
   return <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>;
 };

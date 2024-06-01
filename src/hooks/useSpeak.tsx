@@ -5,6 +5,7 @@ import * as sdk from "microsoft-cognitiveservices-speech-sdk";
 import React, { useEffect, useRef, useState } from "react";
 import { useThrottledCallback } from "use-debounce";
 import { useAppContext } from "../context/VoxProvider";
+import { APP_ENVIRONMENT, ENVIRONMENT_TYPE, ERROR_CODES } from "../utils/constant.utils";
 
 function useTTSwithAI({
   shouldCallOnEnd = false,
@@ -27,11 +28,11 @@ function useTTSwithAI({
   const playerRef = React.useRef<sdk.SpeakerAudioDestination | null>(null);
   const audioConfig = React.useRef<sdk.AudioConfig | null>(null);
   const speechSythesizerRef = React.useRef<sdk.SpeechSynthesizer | null>(null);
-  const { getAuthTokenAzure } = useAppContext();
+  const { getAuthTokenAzure, token, region, refreshToken } = useAppContext();
   const getAuthTokenAzureApi = useRef(getAuthTokenAzure);
 
   const throttledCalledback = useThrottledCallback((text) => startTextToSpeech(text), throttleDelay);
-  const isLocal = process.env.NODE_ENV === "development";
+  const isLocal = APP_ENVIRONMENT === ENVIRONMENT_TYPE.DEV;
 
   const startTextToSpeech = async (text: string, _cancelEndCallback?: boolean): Promise<() => void> => {
     if (isSpeaking) Promise.reject("Already speaking");
@@ -63,7 +64,6 @@ function useTTSwithAI({
       speechSythesizerRef.current = null;
     }
     if (!config) {
-      const { token, region } = (await getAuthTokenAzureApi.current()) ?? {};
       if (!token || !region) Promise.reject(`Error getting token or region`);
       setConfig({ t: token, r: region });
       const speechConfig = sdk.SpeechConfig.fromAuthorizationToken(token, region);
@@ -91,7 +91,7 @@ function useTTSwithAI({
           return null; // or undefined
         },
         (error) => {
-          isLocal && console.log(error);
+          isLocal && console.log(error, "error");
           speechSythesizerRef.current?.close();
           audioConfig.current?.close();
           speechSythesizerRef.current = null;
@@ -101,8 +101,17 @@ function useTTSwithAI({
         // debug statement
         setIsSpeaking(true);
       };
+      speechSythesizerRef.current.SynthesisCanceled = async (_s, e) => {
+        if (e.result?.errorDetails?.includes(ERROR_CODES.CONNECTION_FAILURE.toString())) {
+          // Unable to contact server. StatusCode: 1006, undefined Reason:  undefined
+          //In case of token expires
+          await refreshToken();
+        } else {
+          console.log(`Something went wrong while fetching the refresh token, error : ${e.result.errorDetails}`);
+        }
+      };
     } catch (err) {
-      console.log(`error`);
+      console.log(`error`, err);
     }
     return () => {
       isLocal && console.log(`closing player`);
@@ -146,7 +155,7 @@ function useTTSwithAI({
       speechSythesizerRef.current?.close();
       speechSythesizerRef.current = null;
     };
-  }, []);
+  }, [token, region]);
 
   const interruptSpeech = () => {
     isLocal && console.log(`interrupting speech`);
