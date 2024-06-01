@@ -5,7 +5,7 @@ import * as sdk from "microsoft-cognitiveservices-speech-sdk";
 import React, { useEffect, useRef, useState } from "react";
 import { useThrottledCallback } from "use-debounce";
 import { useAppContext } from "../context/VoxProvider";
-import { APP_ENVIRONMENT, ENVIRONMENT_TYPE } from "../utils/constant.utils";
+import { APP_ENVIRONMENT, ENVIRONMENT_TYPE, ERROR_CODES } from "../utils/constant.utils";
 
 function useTTSwithAI({
   shouldCallOnEnd = false,
@@ -102,9 +102,7 @@ function useTTSwithAI({
         setIsSpeaking(true);
       };
       speechSythesizerRef.current.SynthesisCanceled = async (_s, e) => {
-        isLocal && console.log(e.result.errorDetails.includes("1006"), e.result);
-
-        if (e.result.errorDetails.includes("1006")) {
+        if (e.result?.errorDetails?.includes(ERROR_CODES.CONNECTION_FAILURE.toString())) {
           // Unable to contact server. StatusCode: 1006, undefined Reason:  undefined
           //In case of token expires
           await refreshToken();

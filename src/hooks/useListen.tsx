@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import * as sdk from "microsoft-cognitiveservices-speech-sdk";
 import { useDebouncedCallback } from "use-debounce";
 import { useAppContext } from "../context/VoxProvider";
+import { ERROR_CODES } from "../utils/constant.utils";
 
 function useListen({
   onEndOfSpeech,
@@ -101,7 +102,11 @@ function useListen({
         recognizerRef.current?.stopContinuousRecognitionAsync();
         setLoading(false);
 
-        if (e.errorCode === 4 || e.errorDetails.includes("1006")) await refreshToken(); //In case when is token expired
+        if (
+          e.errorCode === ERROR_CODES.INVALID_TOKEN ||
+          e.errorDetails.includes(ERROR_CODES.CONNECTION_FAILURE.toString())
+        )
+          await refreshToken(); //In case when is token expired
       };
 
       recognizerRef.current.sessionStopped = (_s, _e) => {
