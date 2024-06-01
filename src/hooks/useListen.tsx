@@ -87,7 +87,7 @@ function useListen({
           setUserHasNotSpoken(false);
         } else if (e.result.reason == sdk.ResultReason.NoMatch) {
           setUserHasNotSpoken(true);
-          isLocal && console.log("NOMATCH: Speech could not be recognized or speech recognision completed.");
+          isLocal && console.log("NOMATCH: Speech could not be recognized or speech recognition completed.");
         }
       };
 
