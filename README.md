@@ -22,11 +22,15 @@ Or using yarn:
 yarn add vox-sdk
 ```
 
-Install tslib if you are facing any error related to that.
+Install tslib.
+
+Using npm
 
 ```bash
 npm install tslib --save-dev
 ```
+
+Using yarn
 
 ```bash
 yarn add tslib -D
@@ -139,7 +143,7 @@ yarn add tslib -D
 
 - For detailed documentation you can visit [sample app here](https://github.com/gautam6023/vox-sdk-test/blob/main/server/src/index.js).
 
-### Setting up the Client
+## Client Setup
 
 - Wrap your application with VoxProvider to make the SDK available throughout your app:
 
@@ -299,10 +303,6 @@ export default MyComponent;
 5. `streamedSentences` :
 
    - Returns an array of strings with all streamed sentences.
-
-## Documentation
-
-For detailed documentation and advanced usage, visit VoxSDK Documentation.
 
 ## Contributing
 
