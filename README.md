@@ -22,6 +22,16 @@ Or using yarn:
 yarn add vox-sdk
 ```
 
+Install tslib if you are facing any error related to that.
+
+```bash
+npm install tslib --save-dev
+```
+
+```bash
+yarn add tslib -D
+```
+
 # Setup
 
 - To set up VoxSDK, you will need to generate a speech_key and region from the Azure Portal.
