@@ -1,6 +1,6 @@
 import React from "react";
 import { useState } from "react";
-import { useSpeak } from "vox-sdk";
+import { useSpeak, SpeechVoices } from "vox-sdk";
 const TextToSpeech = () => {
   const [text, setText] = useState("");
   const { interruptSpeech, speak, isSpeaking } = useSpeak({
@@ -9,6 +9,7 @@ const TextToSpeech = () => {
     },
     shouldCallOnEnd: true,
     throttleDelay: 1000,
+    voice: SpeechVoices["ja-JP-NanamiNeural"],
   });
 
   return (

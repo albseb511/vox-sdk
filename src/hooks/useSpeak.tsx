@@ -6,16 +6,17 @@ import React, { useEffect, useRef, useState } from "react";
 import { useThrottledCallback } from "use-debounce";
 import { useAppContext } from "../context/VoxProvider";
 import { APP_ENVIRONMENT, ENVIRONMENT_TYPE, ERROR_CODES } from "../utils/constant.utils";
+import { SpeechVoices } from "../utils/speechVoices";
 
 function useTTSwithAI({
   shouldCallOnEnd = false,
-  voice = "en-US-JennyNeural",
+  voice = SpeechVoices["en-US-JennyNeural"],
   onEnd,
   throttleDelay = 100,
 }: {
   shouldCallOnEnd: boolean;
   onEnd: () => void;
-  voice?: string;
+  voice?: SpeechVoices;
   throttleDelay?: number;
 }) {
   const [isSpeaking, setIsSpeaking] = useState(false);
