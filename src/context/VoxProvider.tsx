@@ -2,11 +2,13 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { createApi } from "../api/axios";
 import { APP_ENVIRONMENT, ENVIRONMENT_TYPE, REFETCH_TOKEN_TIME } from "../utils/constant.utils";
+import { AxiosHeaders } from "axios";
 
 // Configuration interface
 interface VoxProviderConfig {
   baseUrl: string;
   onAuthRefresh: () => Promise<{ token: string; region: string }>;
+  headersForBaseUrl?: AxiosHeaders;
 }
 
 interface GetAuthResponse {
@@ -25,14 +27,11 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | null>(null);
 
 // Provider component
-export const VoxProvider: React.FC<{ children: React.ReactNode; config: VoxProviderConfig }> = ({
-  children,
-  config,
-}) => {
+export const VoxProvider: React.FC<{ children: React.ReactNode; config: VoxProviderConfig }> = ({ children, config }) => {
   const [token, setToken] = useState<string | null>(null);
   const [region, setRegion] = useState<string | null>(null);
   const lastCallRef = useRef(0);
-  const apiRef = useRef(createApi(config?.baseUrl));
+  const apiRef = useRef(createApi(config?.baseUrl, config.headersForBaseUrl));
   const isLocal = APP_ENVIRONMENT === ENVIRONMENT_TYPE.DEV;
 
   const getAuthTokenAzure = React.useCallback(async () => {
