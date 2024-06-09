@@ -9,7 +9,7 @@ const TextToSpeech = () => {
     },
     shouldCallOnEnd: true,
     throttleDelay: 1000,
-    voice: SpeechVoices["ja-JP-NanamiNeural"],
+    voice: SpeechVoices.enUSGuyNeural,
   });
 
   return (

@@ -10,7 +10,7 @@ import { SpeechVoices } from "../utils/speechVoices";
 
 function useTTSwithAI({
   shouldCallOnEnd = false,
-  voice = SpeechVoices["en-US-JennyNeural"],
+  voice = SpeechVoices.enUSGuyNeural,
   onEnd,
   throttleDelay = 100,
 }: {
