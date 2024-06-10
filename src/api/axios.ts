@@ -1,4 +1,4 @@
-import axiosLibrary from "axios";
+import axiosLibrary, { AxiosHeaders } from "axios";
 import { APP_ENVIRONMENT, ENVIRONMENT_TYPE } from "../utils/constant.utils";
 
 export const defaultBaseUrl = "http://localhost:3001";
@@ -9,9 +9,11 @@ const api = axiosLibrary.create({
   baseURL: defaultBaseUrl,
 });
 
-export const createApi = (baseUrl: string) => {
+export const createApi = (baseUrl: string, headers?: AxiosHeaders) => {
   return axiosLibrary.create({
     baseURL: baseUrl || defaultBaseUrl,
+    headers: headers || {},
+
     // manage with errors
   });
 };

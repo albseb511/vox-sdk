@@ -61,87 +61,67 @@ yarn add tslib -D
   ```
 
 - Here's a sample implementation of the `/token` endpoint.
-- This implementation ensures the token is refreshed every 9 minutes and generates a new token when the client requests a refresh.
 
-  ```ts
-  import express from "express";
-  import "dotenv/config";
-  import axios from "axios";
+```ts
+import express from "express";
+import cors from "cors";
+import "dotenv/config";
+import axios from "axios";
 
-  let token = null; //iniatilly token will be null
-  let lastTokenTimestamp = null;
+const app = express();
 
-  //Create .env file and add following values
-  const speechKey = process.env.SPEECH_KEY;
-  const speechRegion = process.env.SPEECH_REGION;
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL,
+  })
+);
 
-  // Get Token function fetches the token from Microsoft Api's
-  const getToken = async () => {
-    try {
-      const headers = {
-        headers: {
-          "Ocp-Apim-Subscription-Key": speechKey,
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-      };
+let token = null;
+const speechKey = process.env.SPEECH_KEY;
+const speechRegion = process.env.SPEECH_REGION;
 
-      const tokenResponse = await axios.post(`https://${speechRegion}.api.cognitive.microsoft.com/sts/v1.0/issueToken`, null, headers);
+const getToken = async () => {
+  try {
+    const headers = {
+      headers: {
+        "Ocp-Apim-Subscription-Key": speechKey,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+    };
 
-      token = tokenResponse.data;
-      lastTokenTimestamp = Date.now();
+    const tokenResponse = await axios.post(`https://${speechRegion}.api.cognitive.microsoft.com/sts/v1.0/issueToken`, null, headers);
 
-      // Generally this token expires after 10 minutes of generation, so we will generate the token at every 9 minutes
-      console.log("Token refreshed at:", new Date(lastTokenTimestamp).toLocaleString());
-    } catch (error) {
-      console.error("Error while getting token:", error);
+    token = tokenResponse.data;
+  } catch (error) {
+    console.error("Error while getting token:", error);
+  }
+};
+
+app.get("/token", async (req, res) => {
+  try {
+    res.setHeader("Content-Type", "application/json");
+
+    // When client asks for refresh token
+    const refreshTheToken = req.query?.refresh;
+
+    if (!token || refreshTheToken) {
+      await getToken();
     }
-  };
 
-  const scheduleTokenRefresh = () => {
-    setInterval(async () => {
-      try {
-        await getToken();
-      } catch (error) {
-        console.error("Error while scheduling token refresh:", error);
-      }
-    }, 9 * 60 * 1000); // 9 minutes in milliseconds, token will be fetched at every 9 minutes
-  };
-
-  // Initial token generation
-  getToken()
-    .then(() => {
-      scheduleTokenRefresh();
-    })
-    .catch((error) => {
-      console.error("Error while generating initial token:", error);
+    res.send({
+      token: token,
+      region: speechRegion,
     });
+  } catch (error) {
+    console.error("Error while handling /token request:", error);
+    res.status(500).send({ error: "An error occurred while processing your request." });
+  }
+});
 
-  // /token endpoint that will return token and region
-  app.get("/token", async (req, res) => {
-    try {
-      res.setHeader("Content-Type", "application/json");
+app.listen(8080, () => console.log("Server running on port 8080"));
+```
 
-      // When client asks for refresh token
-      const refreshTheToken = req.query?.refresh;
-
-      if (!token || refreshTheToken) {
-        await getToken();
-      }
-
-      res.send({
-        token: token,
-        region: speechRegion,
-      });
-    } catch (error) {
-      console.error("Error while handling /token request:", error);
-      res.status(500).send({ error: "An error occurred while processing your request." });
-    }
-  });
-
-  app.listen(8080, () => console.log("Server running on port 8080"));
-  ```
-
-- For detailed documentation you can visit [sample app here](https://github.com/gautam6023/vox-sdk-test/blob/main/server/src/index.js).
+- For detailed documentation you can visit [sample app here](https://github.com/albseb511/vox-sdk/blob/main/example/server/src/index.js).
 
 ## Client Setup
 
@@ -163,6 +143,8 @@ yarn add tslib -D
 
   2. `OnAuthRefresh` : A callback function that is invoked when any authentication error occurs or the token expires.
 
+  3. `headersForBaseUrl` : Option to pass baseUrl Config.
+
 - Here's the implmentation of the above two step.
 
   ```tsx
@@ -173,6 +155,9 @@ yarn add tslib -D
         const { data } = await axios.get("https://exampleapp.com/token?refresh=true");
         return { token: data.token, region: data.region };
       },
+      headersForBaseUrl: {
+        //... Bearer Authentication token or other config
+      },
     }}
   >
     <App />
@@ -180,7 +165,7 @@ yarn add tslib -D
   ```
 
 - The `onAuthRefresh` callback will refresh the token and return it with the region.
-- For more details you can visit here [sample app implementation](https://github.com/gautam6023/vox-sdk-test/blob/main/client/src/main.tsx)
+- For more details you can visit here [sample app implementation](https://github.com/albseb511/vox-sdk/blob/main/example/client/src/main.tsx)
 
 # Usage
 
@@ -191,27 +176,27 @@ After setting up the Server and VoxProvider we are ready to use `useListen` and 
 Integrate speech-to-text functionality in your components:
 
 ```jsx
-import { useListen } from "voxsdk";
-
-function MyComponent() {
+import { useListen } from "vox-sdk";
+import React from "react";
+const SpeechToText = () => {
   const { answers, loading, startSpeechRecognition, stopSpeechRecognition } = useListen({
     onEndOfSpeech: () => {
-      setText(answers.join(""));
+      console.log(answers);
     },
+    automatedEnd: true,
+    delay: 1000,
   });
-
   return (
-    <div>
+    <>
       <button disabled={loading} onClick={startSpeechRecognition}>
-        Start Listening
+        Start Litsening
       </button>
-      <button onClick={stopSpeechRecognition}>Stop Listening</button>
-      <p>Transcript: {answers.join("")}</p>
-    </div>
+      <button onClick={stopSpeechRecognition}> Stop Listening</button>
+    </>
   );
-}
+};
 
-export default MyComponent;
+export default SpeechToText;
 ```
 
 #### `useListen` hook expects following parameters.
@@ -240,27 +225,56 @@ export default MyComponent;
 4. `answer` : The last transcribed text.
 5. `recognizerRef` : An instance of `microsoft-cognitiveservices-speech-sdk`.
 
+- [Visit sample example implementation here](https://github.com/albseb511/vox-sdk/blob/main/example/client/src/components/SpeechToText.tsx).
+
 ### Using useSpeak Hook
 
 Implement text-to-speech in your application:
 
 ```tsx
-import { useSpeak, SpeechVoices } from "voxsdk";
 
-function MyComponent() {
-  const { interruptSpeech, speak, hasAllSentencesBeenSpoken, isSpeaking, streamedSentences } = useSpeak({
+import React from "react";
+import { useState } from "react";
+import { useSpeak, SpeechVoices } from "vox-sdk";
+const TextToSpeech = () => {
+  const [text, setText] = useState("");
+  const { interruptSpeech, speak, isSpeaking } = useSpeak({
+  
     onEnd: () => {
-      console.log("It worked");
+      console.log("Spech ended");
     },
     shouldCallOnEnd: true,
     throttleDelay: 1000,
+
     voice: SpeechVoices.enUSAIGenerate1Neural, // AI Voices
+
   });
 
-  return <button onClick={speak("Hey, how are you")}>Speak</button>;
-}
+  return (
+    <>
+      <h3>Text To Speech</h3>
+      <input type="text" onChange={(e) => setText(e.target.value)} value={text} />
+      <button
+        onClick={() => {
+          speak(text);
+        }}
+        disabled={isSpeaking}
+      >
+        Start Speaking
+      </button>
+      <button
+        disabled={!isSpeaking}
+        onClick={() => {
+          interruptSpeech();
+        }}
+      >
+        Stop Speaking
+      </button>
+    </>
+  );
+};
 
-export default MyComponent;
+export default TextToSpeech;
 ```
 
 #### `useSpeak` hook expects following parameters.
@@ -435,6 +449,8 @@ export default MyComponent;
 5. `streamedSentences` :
 
    - Returns an array of strings with all streamed sentences.
+
+- - [Visit sample example implementation here](https://github.com/albseb511/vox-sdk/blob/main/example/client/src/components/TextToSpeech.tsx).
 
 ## Contributing
 
