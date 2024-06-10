@@ -163,6 +163,8 @@ yarn add tslib -D
 
   2. `OnAuthRefresh` : A callback function that is invoked when any authentication error occurs or the token expires.
 
+  3. `headersForBaseUrl` : Option to pass baseUrl Config.
+
 - Here's the implmentation of the above two step.
 
   ```tsx
@@ -172,6 +174,9 @@ yarn add tslib -D
       onAuthRefresh: async () => {
         const { data } = await axios.get("https://exampleapp.com/token?refresh=true");
         return { token: data.token, region: data.region };
+      },
+      headersForBaseUrl: {
+        //... Bearer Authentication token or other config
       },
     }}
   >
